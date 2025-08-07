@@ -158,123 +158,29 @@
         </div>
     </div>
 
-    <script>
-        // PWA Service Worker Registration
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').then(registration => {
-                    console.log('Service Worker registrado com sucesso:', registration.scope);
-                }, err => {
-                    console.log('Falha no registro do Service Worker:', err);
-                });
-            });
-        }
+    <script type="module">
+        // Importar as funções necessárias do Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        // A SUA CONFIGURAÇÃO PESSOAL DO FIREBASE VAI AQUI
+        const firebaseConfig = {
+          apiKey: "AIzaSyDPisgGzruxqnXzf9hPlb05uCN3hMozt2s",
+          authDomain: "crm-silva-tintas.firebaseapp.com",
+          projectId: "crm-silva-tintas",
+          storageBucket: "crm-silva-tintas.firebasestorage.app",
+          messagingSenderId: "37152653096",
+          appId: "1:37152653096:web:26343eee0a516de3abda1d",
+          measurementId: "G-PM419Y78GD"
+        };
+
+        // Inicializar o Firebase e o Firestore
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const clientsCollection = collection(db, "clients");
 
         document.addEventListener('DOMContentLoaded', () => {
-            const initialClients = [
-                { id: 1, name: "Moreiras Funilaria e Pintura", address: "R. Dr. José Foz, 1522, Pres. Prudente", contact: "(18) 3903-4318", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 2, name: "Fernandes Funilaria e Pintura", address: "Av. Joaquim Constantino, 2691, Pres. Prudente", contact: "(18) 3905-1888", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 3, name: "Oficina Magnum", address: "R. Mendes de Moraes, 1375, Pres. Prudente", contact: "(18) 3903-1001", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 4, name: "Vanin Funilaria e Pintura", address: "Av. Pres. Juscelino Kubitschek, 8590, Pres. Prudente", contact: "(18) 3906-3838", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 5, name: "Auto Pinturas Presidente", address: "R. Dr. Gurgel, 1520, Pres. Prudente", contact: "(18) 3221-0988", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 6, name: "Stop Car Funilaria", address: "Av. Brasil, 2811, Pres. Prudente", contact: "(18) 3903-4004", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 7, name: "Liane Veículos (Funilaria)", address: "Av. Manoel Goulart, 3600, Pres. Prudente", contact: "(18) 2101-2101", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 8, name: "Autoeste Veículos (Chevrolet)", address: "Av. Manoel Goulart, 2350, Pres. Prudente", contact: "(18) 2104-5000", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 9, name: "Sector Veículos (Volkswagen)", address: "Av. Manoel Goulart, 3939, Pres. Prudente", contact: "(18) 3902-9555", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 10, name: "V. Muchiutt Veículos (Ford)", address: "Av. Manoel Goulart, 4000, Pres. Prudente", contact: "(18) 3918-9999", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 11, name: "Proeste (Fiat)", address: "Av. Manoel Goulart, 2651, Pres. Prudente", contact: "(18) 2101-8181", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 12, name: "T-Line (Toyota)", address: "Av. Manoel Goulart, 4351, Pres. Prudente", contact: "(18) 3902-9400", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 13, name: "Daitan (Honda)", address: "Av. Manoel Goulart, 3839, Pres. Prudente", contact: "(18) 3918-5800", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 14, name: "Nandin Sound e Acessórios", address: "Av. Brasil, 2505, Pres. Prudente", contact: "(18) 3903-5503", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 15, name: "Prudenparts Acessórios", address: "Av. Brasil, 1855, Pres. Prudente", contact: "(18) 3903-5500", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 16, name: "Impacto Rodas", address: "Av. Brasil, 1615, Pres. Prudente", contact: "(18) 3903-2223", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 17, name: "Polimentos e Estética Detail", address: "R. Ribeiro de Barros, 1848, Pres. Prudente", contact: "(18) 99745-5555", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 18, name: "Martelinho de Ouro Prudente", address: "Av. Washington Luiz, 2640, Pres. Prudente", contact: "(18) 3903-6666", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 19, name: "Garage 59 Customizações", address: "R. Dr. Gurgel, 550, Pres. Prudente", contact: "(18) 99709-5959", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 20, name: "Funilaria e Pintura Arte Car", address: "R. Euclides da Cunha, 1050, Dracena", contact: "(18) 3821-3000", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 21, name: "Funilaria Santa Rita", address: "R. Rui Barbosa, 1530, Santo Anastácio", contact: "(18) 3263-1444", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 22, name: "Beto Car Funilaria", address: "R. Alvino Gomes Teixeira, 1200, Pirapozinho", contact: "(18) 3269-1234", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 23, name: "Funilaria e Pintura do Alemão", address: "Av. Sete de Setembro, 850, Martinópolis", contact: "(18) 3275-1234", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 24, name: "Speed Car Funilaria", address: "R. Campos Sales, 123, Presidente Venceslau", contact: "(18) 3271-4567", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 25, name: "Adamantina Veículos (Funilaria)", address: "Alameda Fernão Dias, 300, Adamantina", contact: "(18) 3521-1234", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 26, name: "Funilaria e Pintura Modelo", address: "R. Quintino Bocaiúva, 789, Presidente Epitácio", contact: "(18) 3281-5678", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 27, name: "Centro de Pintura Automotiva", address: "Av. Coronel Marcondes, 4500, Pres. Prudente", contact: "(18) 3908-7890", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 28, name: "Art Final Pinturas", address: "R. Bela, 500, Pres. Prudente", contact: "(18) 3223-9876", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 29, name: "Stop Car Acessórios", address: "Av. Manoel Goulart, 1800, Pres. Prudente", contact: "(18) 3223-4567", segment: "Reparação Automotiva", status: "Não contatado", notes: [] },
-                { id: 30, name: "Jandaia Transportes", address: "Rod. Raposo Tavares, S/N - Km 562, Pres. Prudente", contact: "(18) 3902-9000", segment: "Frotas e Veículos Pesados", status: "Não contatado", notes: [] },
-                { id: 31, name: "TNT Mercúrio Cargas", address: "R. Maria de Conceição, 110, Pres. Prudente", contact: "0800 979 6979", segment: "Frotas e Veículos Pesados", status: "Não contatado", notes: [] },
-                { id: 32, name: "Ativo Soluções e Logística", address: "Rod. Júlio Budisk, Km 5, Pres. Prudente", contact: "(18) 3909-6900", segment: "Frotas e Veículos Pesados", status: "Não contatado", notes: [] },
-                { id: 33, name: "Transportadora RodoNaves", address: "R. Prof.ª Sabelina de Campos, 350, Pres. Prudente", contact: "(18) 2101-9900", segment: "Frotas e Veículos Pesados", status: "Não contatado", notes: [] },
-                { id: 34, name: "Braspress Transportes", address: "R. Maria Fernandes, 250, Pres. Prudente", contact: "(18) 2101-8500", segment: "Frotas e Veículos Pesados", status: "Não contatado", notes: [] },
-                { id: 35, name: "Usina Alto Alegre", address: "Rod. PR-458, s/n, Santo Inácio (PR)", contact: "(44) 3352-8200", segment: "Frotas e Veículos Pesados", status: "Não contatado", notes: [] },
-                { id: 36, name: "Cocal Energia", address: "Rod. SP-425, km 423, Paraguaçu Paulista", contact: "(18) 3361-8800", segment: "Frotas e Veículos Pesados", status: "Não contatado", notes: [] },
-                { id: 37, name: "Raízen (Unidade Tarumã)", address: "Fazenda Maracaí, s/n, Tarumã", contact: "(18) 3373-9000", segment: "Frotas e Veículos Pesados", status: "Não contatado", notes: [] },
-                { id: 38, name: "Agroterenas", address: "Rod. SP-270, km 480, Paraguaçu Paulista", contact: "(18) 3361-9100", segment: "Frotas e Veículos Pesados", status: "Não contatado", notes: [] },
-                { id: 39, name: "Coopermota (Frota)", address: "Av. Coronel José Soares Marcondes, 3200, Pres. Prudente", contact: "(18) 3344-9300", segment: "Frotas e Veículos Pesados", status: "Não contatado", notes: [] },
-                { id: 40, name: "Gas-Oil Transportes", address: "Rod. Raposo Tavares, Km 580, Regente Feijó", contact: "(18) 3279-4400", segment: "Frotas e Veículos Pesados", status: "Não contatado", notes: [] },
-                { id: 41, name: "Transportadora JSL", address: "Av. Pres. Juscelino Kubitschek, 1000, Pres. Prudente", contact: "(18) 2101-7700", segment: "Frotas e Veículos Pesados", status: "Não contatado", notes: [] },
-                { id: 42, name: "Funada Transportes", address: "Av. Miguel Damha, 120, Pres. Prudente", contact: "(18) 3906-1234", segment: "Frotas e Veículos Pesados", status: "Não contatado", notes: [] },
-                { id: 43, name: "Transportadora Rápido Oeste", address: "R. da Imprensa, 500, Pres. Prudente", contact: "(18) 3903-5566", segment: "Frotas e Veículos Pesados", status: "Não contatado", notes: [] },
-                { id: 44, name: "TCPP - Transportes Coletivos", address: "R. Dr. Gurgel, 1191, Pres. Prudente", contact: "(18) 3903-4962", segment: "Frotas e Veículos Pesados", status: "Não contatado", notes: [] },
-                { id: 45, name: "Marcenaria Oliveira Planejados", address: "R. Vinte e Oito, 145, Pres. Prudente", contact: "(18) 99753-4395", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 46, name: "Grupo RTW (Móveis Planejados)", address: "Av. da Saudade, 1355, Pres. Prudente", contact: "(18) 3905-1045", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 47, name: "Voltarelli Madeiras", address: "Av. Brasil, 3233, Pres. Prudente", contact: "(18) 3221-5588", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 48, name: "Marcenaria São José", address: "R. Casemiro Dias, 1435, Pres. Prudente", contact: "(18) 3221-4835", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 49, name: "Arte & Estilo Marcenaria", address: "R. Paulo Marcondes, 590, Pres. Prudente", contact: "(18) 3907-4228", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 50, name: "Móveis Planejados Italínea", address: "Av. Manoel Goulart, 1234, Pres. Prudente", contact: "(18) 3903-1020", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 51, name: "Todeschini Presidente Prudente", address: "Av. Washington Luiz, 2500, Pres. Prudente", contact: "(18) 3222-3344", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 52, name: "Marcenaria Irmãos Corazza", address: "R. José Claro, 456, Pres. Prudente", contact: "(18) 3223-5678", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 53, name: "Madeireira Frare", address: "Av. Brasil, 3500, Pres. Prudente", contact: "(18) 3221-9876", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 54, name: "Arq. Alexandre Dassa", address: "R. Dr. Gurgel, 1200, Pres. Prudente", contact: "contato@dassa.arq.br", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 55, name: "Arq. Carolina Viafora", address: "Av. Washington Luiz, 2000, Pres. Prudente", contact: "(18) 99700-1234", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 56, name: "Arq. Fernando Piffer", address: "R. Barão do Rio Branco, 800, Pres. Prudente", contact: "fernando@piffer.arq.br", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 57, name: "Marcenaria do Alemão", address: "R. da Saudade, 500, Presidente Venceslau", contact: "(18) 3271-9876", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 58, name: "Móveis Rústicos Martinópolis", address: "Av. do Comércio, 1500, Martinópolis", contact: "(18) 3275-5432", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 59, name: "Marcenaria Modelo", address: "R. das Flores, 300, Adamantina", contact: "(18) 3522-8765", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 60, name: "Dracena Móveis Planejados", address: "Av. dos Expedicionários, 2000, Dracena", contact: "(18) 3822-4567", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 61, name: "Marcenaria Santo Anastácio", address: "R. Brasil, 100, Santo Anastácio", contact: "(18) 3263-8765", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 62, name: "Pirapozinho Móveis", address: "Av. São Paulo, 900, Pirapozinho", contact: "(18) 3269-5432", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 63, name: "Marcenaria Qualitá", address: "R. Ribeiro de Barros, 2500, Pres. Prudente", contact: "(18) 3908-1234", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 64, name: "Dell Anno Móveis Planejados", address: "Av. Manoel Goulart, 2800, Pres. Prudente", contact: "(18) 3221-7654", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 65, name: "Madeireira Rio 42", address: "Rod. Raposo Tavares, km 560, Pres. Prudente", contact: "(18) 3906-4242", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 66, name: "Luthieria Prudente", address: "R. dos Músicos, 123, Pres. Prudente", contact: "(18) 99654-3210", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 67, name: "Artesanato em Madeira Vó Nena", address: "R. dos Artesãos, 45, Pres. Prudente", contact: "(18) 3223-8765", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 68, name: "F.A. Móveis Planejados", address: "R. Joaquim Nabuco, 800, Pres. Prudente", contact: "(18) 3903-9876", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 69, name: "Madeireira do Zé", address: "Av. da Saudade, 2000, Presidente Venceslau", contact: "(18) 3272-1234", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 70, name: "Arq. Leda Correia", address: "R. Siqueira Campos, 1500, Pres. Prudente", contact: "contato@ledacorreia.com.br", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 71, name: "Marcenaria Arte Nobre", address: "R. das Acácias, 150, Adamantina", contact: "(18) 3521-7654", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 72, name: "Carpintaria São Marcos", address: "R. dos Pinheiros, 70, Regente Feijó", contact: "(18) 3279-5432", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 73, name: "Decor House Móveis", address: "Av. Washington Luiz, 3000, Pres. Prudente", contact: "(18) 3916-7654", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 74, name: "Madeireira Cedro Rosa", address: "Av. Brasil, 4000, Dracena", contact: "(18) 3821-1234", segment: "Indústria da Madeira e Mobiliário", status: "Não contatado", notes: [] },
-                { id: 75, name: "Serralheria Pai e Filho", address: "R. dos Expedicionários, 1260, Pres. Prudente", contact: "(18) 3905-2525", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 76, name: "Pruden-Aço Serralheria", address: "R. Inocêncio de Tarso, 20, Pres. Prudente", contact: "(18) 3907-2800", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 77, name: "Metalúrgica FREI", address: "R. Othmar Brand, 280, Pres. Prudente", contact: "(18) 3909-1055", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 78, name: "Constrix Construtora", address: "R. Dr. Gurgel, 1500, Pres. Prudente", contact: "contato@constrix.com.br", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 79, name: "Mampei Funada Construtora", address: "Av. Washington Luiz, 1370, Pres. Prudente", contact: "(18) 3229-1000", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 80, name: "Artenge Construções", address: "R. Barão do Rio Branco, 500, Pres. Prudente", contact: "(18) 3221-8765", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 81, name: "Serralheria São Francisco", address: "R. José Claro, 800, Pres. Prudente", contact: "(18) 3223-5432", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 82, name: "Metalúrgica Prudente", address: "R. da Indústria, 100, Pres. Prudente", contact: "(18) 3909-8765", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 83, name: "Estruturas Metálicas Torres", address: "Av. Industrial, 500, Pres. Prudente", contact: "(18) 3909-1234", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 84, name: "Calhas e Rufos Prudente", address: "R. dos Seringueiros, 300, Pres. Prudente", contact: "(18) 3905-5432", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 85, name: "Construtora W-A", address: "R. Siqueira Campos, 2000, Pres. Prudente", contact: "(18) 3222-9876", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 86, name: "Serralheria Venceslauense", address: "Av. Tiradentes, 800, Presidente Venceslau", contact: "(18) 3271-8765", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 87, name: "Metalúrgica Martinópolis", address: "R. do Comércio, 200, Martinópolis", contact: "(18) 3275-5432", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 88, name: "Indústria de Máquinas Adamantina", address: "Av. da Saudade, 1500, Adamantina", contact: "(18) 3521-9876", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 89, name: "Construtora Dracena", address: "R. Monte Castelo, 500, Dracena", contact: "(18) 3821-5432", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 90, name: "Serralheria do Povo", address: "Av. Brasil, 700, Santo Anastácio", contact: "(18) 3263-5432", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 91, name: "Metalúrgica Pirapozinho", address: "R. da Indústria, 300, Pirapozinho", contact: "(18) 3269-8765", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 92, name: "Construtora Noroeste", address: "R. das Palmeiras, 100, Álvares Machado", contact: "(18) 3273-5432", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 93, name: "Serralheria Art Metal", address: "R. Joaquim Nabuco, 1500, Pres. Prudente", contact: "(18) 3908-5432", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 94, name: "Engemetal Estruturas", address: "Av. Juscelino Kubitschek, 10000, Pres. Prudente", contact: "(18) 3909-8765", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 95, name: "Construtora A. Gaspar", address: "R. Ribeiro de Barros, 1000, Pres. Prudente", contact: "(18) 3221-5432", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 96, name: "Serralheria e Calhas São Judas", address: "R. da Paz, 50, Regente Feijó", contact: "(18) 3279-8765", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 97, name: "Metalúrgica Fundiart", address: "R. dos Metais, 200, Pres. Prudente", contact: "(18) 3909-5432", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 98, name: "Construtora e Incorporadora Vértice", address: "Av. Manoel Goulart, 900, Pres. Prudente", contact: "(18) 3222-5432", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 99, name: "Prudenferro", address: "Av. Brasil, 2900, Pres. Prudente", contact: "(18) 3903-3344", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] },
-                { id: 100, name: "Construtora Pacaembu", address: "Av. Manoel Goulart, 2400, Pres. Prudente", contact: "(18) 3916-8888", segment: "Indústria Metalmecânica e Construção", status: "Não contatado", notes: [] }
-            ];
-
-            let clients = JSON.parse(localStorage.getItem('crmClients')) || initialClients;
+            let allClients = [];
 
             const tableBody = document.getElementById('client-table-body');
             const searchInput = document.getElementById('search');
@@ -307,17 +213,24 @@
                 "Cliente": 4,
                 "Perdido": 5
             };
+            
+            // Listener em tempo real do Firestore
+            onSnapshot(clientsCollection, (snapshot) => {
+                allClients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderTable();
+                renderDashboard();
+            }, (error) => {
+                console.error("Erro ao buscar dados: ", error);
+                alert("Não foi possível carregar os dados. Verifique a sua ligação à internet e a configuração do Firebase.");
+            });
 
-            const saveToLocalStorage = () => {
-                localStorage.setItem('crmClients', JSON.stringify(clients));
-            };
 
             const renderDashboard = () => {
-                const total = clients.length;
-                const naoContatado = clients.filter(c => c.status === 'Não contatado').length;
-                const contatado = clients.filter(c => c.status === 'Contatado').length;
-                const emNegociacao = clients.filter(c => c.status === 'Em negociação').length;
-                const cliente = clients.filter(c => c.status === 'Cliente').length;
+                const total = allClients.length;
+                const naoContatado = allClients.filter(c => c.status === 'Não contatado').length;
+                const contatado = allClients.filter(c => c.status === 'Contatado').length;
+                const emNegociacao = allClients.filter(c => c.status === 'Em negociação').length;
+                const cliente = allClients.filter(c => c.status === 'Cliente').length;
                 
                 dashboard.innerHTML = `
                     <div class="bg-white p-4 rounded-lg shadow-sm text-center">
@@ -347,7 +260,7 @@
                 const searchTerm = searchInput.value.toLowerCase();
                 const selectedSegment = segmentFilter.value;
 
-                const filteredClients = clients.filter(client => {
+                const filteredClients = allClients.filter(client => {
                     const nameMatch = client.name.toLowerCase().includes(searchTerm);
                     const segmentMatch = selectedSegment === 'todos' || client.segment === selectedSegment;
                     return nameMatch && segmentMatch;
@@ -369,7 +282,7 @@
                         row.innerHTML = `
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <p class="font-semibold text-gray-900">${client.name}</p>
-                                <p class="text-sm text-gray-500">${client.address.split(',').pop().trim()}</p>
+                                <p class="text-sm text-gray-500">${client.address ? client.address.split(',').pop().trim() : ''}</p>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${client.segment}</td>
                             <td class="px-6 py-4 whitespace-nowrap">
@@ -384,7 +297,7 @@
             };
 
             const openDetailsModal = (clientId) => {
-                const client = clients.find(c => c.id === clientId);
+                const client = allClients.find(c => c.id === clientId);
                 if (!client) return;
 
                 clientModalContent.innerHTML = `
@@ -392,8 +305,8 @@
                         <div class="flex justify-between items-start mb-4">
                             <div>
                                 <h2 class="text-2xl font-bold text-gray-900">${client.name}</h2>
-                                <p class="text-sm text-gray-500">${client.address}</p>
-                                <p class="text-sm text-gray-500">${client.contact}</p>
+                                <p class="text-sm text-gray-500">${client.address || ''}</p>
+                                <p class="text-sm text-gray-500">${client.contact || ''}</p>
                             </div>
                             <button id="close-modal-btn" class="p-1 rounded-full hover:bg-gray-200">&times;</button>
                         </div>
@@ -417,7 +330,7 @@
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800 mb-2">Anotações</h3>
                             <div id="notes-container" class="space-y-3 mb-4 max-h-48 overflow-y-auto bg-gray-50 p-3 rounded-md">
-                                ${client.notes.length > 0 ? client.notes.map(note => `
+                                ${client.notes && client.notes.length > 0 ? client.notes.map(note => `
                                     <div class="text-sm border-b border-gray-200 pb-2">
                                         <p class="text-gray-700">${note.text}</p>
                                         <p class="text-xs text-gray-400 mt-1">${note.date}</p>
@@ -428,6 +341,9 @@
                                 <input type="text" id="new-note-input" placeholder="Adicionar nova anotação..." class="flex-grow px-3 py-2 border border-gray-300 rounded-md">
                                 <button id="add-note-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md hover:bg-gray-300 transition">Adicionar</button>
                             </div>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-gray-200 text-right">
+                            <button id="delete-client-btn" class="text-sm text-red-600 hover:text-red-800 font-medium py-2 px-3 rounded-md hover:bg-red-50">Excluir Cliente</button>
                         </div>
                     </div>
                 `;
@@ -441,6 +357,7 @@
                 document.getElementById('close-modal-btn').addEventListener('click', closeDetailsModal);
                 document.getElementById('save-status-btn').addEventListener('click', () => saveClientData(clientId));
                 document.getElementById('add-note-btn').addEventListener('click', () => addNote(clientId));
+                document.getElementById('delete-client-btn').addEventListener('click', () => handleDeleteClient(clientId));
             };
 
             const closeDetailsModal = () => {
@@ -468,34 +385,59 @@
                 }, 300);
             };
 
-            const saveClientData = (clientId) => {
-                const client = clients.find(c => c.id === clientId);
+            const saveClientData = async (clientId) => {
+                const clientDocRef = doc(db, "clients", clientId);
                 const statusSelect = document.getElementById('status-select');
-                client.status = statusSelect.value;
-                
-                saveToLocalStorage();
-                renderTable();
-                renderDashboard();
-                closeDetailsModal();
+                try {
+                    await updateDoc(clientDocRef, { status: statusSelect.value });
+                    closeDetailsModal();
+                } catch (e) {
+                    console.error("Erro ao atualizar documento: ", e);
+                    alert("Falha ao salvar. Tente novamente.");
+                }
             };
 
-            const addNote = (clientId) => {
-                const client = clients.find(c => c.id === clientId);
+            const addNote = async (clientId) => {
+                const clientDocRef = doc(db, "clients", clientId);
                 const noteInput = document.getElementById('new-note-input');
                 const noteText = noteInput.value.trim();
 
                 if (noteText) {
-                    client.notes.unshift({
-                        text: noteText,
-                        date: new Date().toLocaleString('pt-BR')
-                    });
-                    noteInput.value = '';
-                    saveToLocalStorage();
-                    openDetailsModal(clientId); // Re-open to refresh notes
+                    const newNote = { text: noteText, date: new Date().toLocaleString('pt-BR') };
+                    try {
+                        await updateDoc(clientDocRef, { notes: arrayUnion(newNote) });
+                        noteInput.value = '';
+                    } catch (e) {
+                        console.error("Erro ao adicionar nota: ", e);
+                        alert("Falha ao adicionar nota. Tente novamente.");
+                    }
                 }
             };
             
-            const handleAddNewClient = (e) => {
+            const handleDeleteClient = (clientId) => {
+                const deleteBtn = document.getElementById('delete-client-btn');
+                const confirmationHtml = `
+                    <p class="text-sm text-gray-800 mr-4">Tem certeza?</p>
+                    <button id="confirm-delete-btn" class="bg-red-600 text-white font-bold py-1 px-3 rounded-md hover:bg-red-700">Sim, Excluir</button>
+                    <button id="cancel-delete-btn" class="text-sm text-gray-600 ml-2 py-1 px-3 rounded-md hover:bg-gray-200">Cancelar</button>
+                `;
+                deleteBtn.parentElement.innerHTML = confirmationHtml;
+
+                document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+                    try {
+                        await deleteDoc(doc(db, "clients", clientId));
+                        closeDetailsModal();
+                    } catch (e) {
+                        console.error("Erro ao excluir documento: ", e);
+                        alert("Falha ao excluir. Tente novamente.");
+                    }
+                });
+                document.getElementById('cancel-delete-btn').addEventListener('click', () => {
+                    openDetailsModal(clientId);
+                });
+            };
+            
+            const handleAddNewClient = async (e) => {
                 e.preventDefault();
                 const name = document.getElementById('new-client-name').value.trim();
                 if (!name) {
@@ -503,7 +445,6 @@
                     return;
                 }
                 const newClient = {
-                    id: Date.now(), // Simple unique ID
                     name: name,
                     address: document.getElementById('new-client-address').value,
                     contact: document.getElementById('new-client-contact').value,
@@ -511,16 +452,18 @@
                     status: 'Não contatado',
                     notes: []
                 };
-                clients.unshift(newClient);
-                saveToLocalStorage();
-                renderTable();
-                renderDashboard();
-                closeAddModal();
+                try {
+                    await addDoc(clientsCollection, newClient);
+                    closeAddModal();
+                } catch (e) {
+                    console.error("Erro ao adicionar documento: ", e);
+                    alert("Falha ao adicionar cliente. Tente novamente.");
+                }
             };
             
             tableBody.addEventListener('click', (e) => {
                 if (e.target.classList.contains('view-details-btn')) {
-                    const clientId = parseInt(e.target.dataset.id, 10);
+                    const clientId = e.target.dataset.id;
                     openDetailsModal(clientId);
                 }
             });
@@ -542,10 +485,6 @@
 
             searchInput.addEventListener('input', renderTable);
             segmentFilter.addEventListener('change', renderTable);
-
-            // Initial render
-            renderDashboard();
-            renderTable();
         });
     </script>
 </body>
