@@ -3,289 +3,435 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRM Colaborativo - Silva Tintas</title>
+    <title>CRM Prospecção - Silva Tintas</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0A3D62"/>
-    <link rel="apple-touch-icon" href="icon-192x192.png">
-
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; }
-        .modal-backdrop { background-color: rgba(0, 0, 0, 0.5); }
-        .modal { transition: opacity 0.3s ease, transform 0.3s ease; }
-        .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        .status-nao-contatado { background-color: #e2e8f0; color: #4a5568; }
-        .status-contatado { background-color: #bee3f8; color: #2b6cb0; }
-        .status-em-negociacao { background-color: #faf089; color: #975a16; }
-        .status-cliente { background-color: #c6f6d5; color: #2f855a; }
-        .status-perdido { background-color: #fed7d7; color: #c53030; }
-        #loading-overlay { position: fixed; inset: 0; background-color: rgba(255, 255, 255, 0.8); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Estilo para a barra de rolagem */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* Transições suaves */
+        .view {
+            transition: opacity 0.5s ease-in-out;
+        }
+        .hidden-view {
+            opacity: 0;
+            pointer-events: none;
+            position: absolute;
+        }
+        .visible-view {
+            opacity: 1;
+        }
     </style>
 </head>
-<body class="antialiased text-gray-800">
+<body class="bg-gray-100 text-gray-800">
 
-    <div id="loading-overlay">
-        <div class="text-center">
-            <svg class="animate-spin h-8 w-8 text-[#0A3D62] mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <p class="mt-2 text-gray-600">A autenticar e carregar dados...</p>
+    <!-- Tela de Login -->
+    <div id="login-view" class="view visible-view min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-white p-8 rounded-xl shadow-lg">
+            <div class="text-center mb-8">
+                 <h1 class="text-3xl font-bold text-gray-700">Silva Tintas</h1>
+                 <p class="text-gray-500">CRM de Prospecção</p>
+            </div>
+            <form id="login-form">
+                <div class="mb-4">
+                    <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Login</label>
+                    <input type="text" id="username" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                    <input type="password" id="password" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300">Entrar</button>
+                <p id="login-error" class="text-red-500 text-sm text-center mt-4"></p>
+            </form>
         </div>
     </div>
 
-    <div id="app" class="hidden">
-        <header class="bg-white shadow-md">
-            <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                <div class="flex items-center space-x-3">
-                     <div class="bg-[#0A3D62] p-2 rounded-md">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    </div>
-                    <h1 class="text-2xl font-bold text-[#0A3D62]">CRM Colaborativo</h1>
-                </div>
-                <button id="add-client-btn" class="bg-[#0A3D62] text-white font-semibold py-2 px-4 rounded-md hover:bg-[#1E90FF] transition text-sm flex items-center space-x-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
-                    <span class="hidden sm:inline">Adicionar Cliente</span>
-                </button>
-            </div>
-        </header>
+    <!-- Tela Principal do CRM -->
+    <div id="crm-view" class="view hidden-view">
+        <!-- Container Principal -->
+        <div class="container mx-auto p-4 md:p-8">
 
-        <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <section id="dashboard" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8"></section>
-            <section class="mb-6 bg-white p-4 rounded-lg shadow-sm">
-                <div class="grid md:grid-cols-3 gap-4 items-center">
-                    <div class="md:col-span-2">
-                        <input type="text" id="search" placeholder="Buscar por nome do cliente..." class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent">
+            <!-- Cabeçalho -->
+            <header class="flex flex-col md:flex-row justify-between items-center mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-700">CRM Silva Tintas</h1>
+                    <p id="welcome-message" class="text-gray-500">Bem-vindo!</p>
+                </div>
+                <div class="flex items-center space-x-4 mt-4 md:mt-0">
+                    <div class="text-center">
+                        <span id="client-count" class="text-2xl font-bold text-blue-600">0</span>
+                        <p class="text-sm text-gray-500">Clientes</p>
+                    </div>
+                    <button id="add-client-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300">
+                        + Adicionar Cliente
+                    </button>
+                    <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300">
+                        Sair
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dashboard do Admin -->
+            <section id="admin-dashboard" class="mb-8 hidden">
+                <h2 class="text-2xl font-bold text-gray-700 mb-4">Dashboard do Administrador</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Card de Conversão -->
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="font-semibold text-gray-600">Taxa de Conversão</h3>
+                        <p id="conversion-rate" class="text-3xl font-bold text-green-600 mt-2">0%</p>
+                        <p class="text-sm text-gray-500">Clientes que se tornaram "Cliente"</p>
+                    </div>
+                    <!-- Card de Clientes por Categoria -->
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="font-semibold text-gray-600">Clientes por Categoria</h3>
+                        <ul id="category-count" class="mt-2 space-y-1 text-sm text-gray-700"></ul>
+                    </div>
+                    <!-- Card de Segmento Mais Explorado -->
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="font-semibold text-gray-600">Segmento Mais Explorado</h3>
+                        <p id="top-segment" class="text-3xl font-bold text-blue-600 mt-2">-</p>
+                        <p class="text-sm text-gray-500">Categoria com mais clientes</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Lista de Clientes -->
+            <main id="client-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Cards dos clientes serão inseridos aqui -->
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal para Adicionar/Editar Cliente (sem alterações) -->
+    <div id="client-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-6">Adicionar Novo Cliente</h2>
+            <form id="client-form">
+                <div class="mb-4">
+                    <label for="empresa" class="block text-sm font-medium text-gray-700 mb-1">Empresa*</label>
+                    <input type="text" id="empresa" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                <div class="mb-4">
+                    <label for="endereco" class="block text-sm font-medium text-gray-700 mb-1">Endereço*</label>
+                    <input type="text" id="endereco" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="telefone" class="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+                        <input type="tel" id="telefone" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
-                        <select id="filter-segment" class="w-full px-4 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent">
-                            <option value="todos">Todos os Segmentos</option>
-                            <option value="Reparação Automotiva">Reparação Automotiva</option>
-                            <option value="Frotas e Veículos Pesados">Frotas e Veículos Pesados</option>
-                            <option value="Indústria da Madeira e Mobiliário">Indústria da Madeira</option>
-                            <option value="Indústria Metalmecânica e Construção">Indústria e Construção</option>
-                            <option value="Outro">Outro</option>
-                        </select>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="email" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                     </div>
                 </div>
-            </section>
-
-            <section class="bg-white rounded-lg shadow-sm overflow-x-auto">
-                <table class="w-full text-left">
-                    <thead class="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                            <th class="px-6 py-3 text-xs font-bold text-gray-600 uppercase tracking-wider">Cliente</th>
-                            <th class="px-6 py-3 text-xs font-bold text-gray-600 uppercase tracking-wider">Segmento</th>
-                            <th class="px-6 py-3 text-xs font-bold text-gray-600 uppercase tracking-wider">Status</th>
-                            <th class="px-6 py-3 text-xs font-bold text-gray-600 uppercase tracking-wider text-right">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="client-table-body"></tbody>
-                </table>
-                 <div id="no-results" class="hidden text-center py-12 px-6">
-                    <p class="text-gray-500">Nenhum cliente encontrado. Adicione o primeiro!</p>
+                <div class="mb-4">
+                    <label for="vendedor" class="block text-sm font-medium text-gray-700 mb-1">Vendedor Responsável*</label>
+                    <input type="text" id="vendedor" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
                 </div>
-            </section>
-        </main>
-
-        <div id="client-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
-            <div id="modal-content" class="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto transform scale-95 opacity-0"></div>
-        </div>
-        
-        <div id="add-client-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
-            <div id="add-modal-content" class="bg-white rounded-lg shadow-2xl w-full max-w-lg transform scale-95 opacity-0">
-                <form id="add-client-form" class="p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold text-gray-900">Adicionar Novo Cliente</h2>
-                        <button type="button" id="cancel-add-btn" class="p-1 rounded-full hover:bg-gray-200">&times;</button>
-                    </div>
-                    <div class="space-y-4">
-                        <div>
-                            <label for="new-client-name" class="block text-sm font-medium text-gray-700">Nome do Cliente</label>
-                            <input type="text" id="new-client-name" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md" required>
-                        </div>
-                        <div>
-                            <label for="new-client-address" class="block text-sm font-medium text-gray-700">Endereço</label>
-                            <input type="text" id="new-client-address" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
-                        </div>
-                        <div>
-                            <label for="new-client-contact" class="block text-sm font-medium text-gray-700">Contato (Telefone/Email)</label>
-                            <input type="text" id="new-client-contact" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md">
-                        </div>
-                        <div>
-                            <label for="new-client-segment" class="block text-sm font-medium text-gray-700">Segmento</label>
-                            <select id="new-client-segment" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md bg-white">
-                                <option value="Reparação Automotiva">Reparação Automotiva</option>
-                                <option value="Frotas e Veículos Pesados">Frotas e Veículos Pesados</option>
-                                <option value="Indústria da Madeira e Mobiliário">Indústria da Madeira</option>
-                                <option value="Indústria Metalmecânica e Construção">Indústria e Construção</option>
-                                <option value="Outro">Outro</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mt-6 flex justify-end">
-                        <button type="submit" class="bg-[#0A3D62] text-white font-bold py-2 px-4 rounded-md hover:bg-[#1E90FF] transition">Salvar Cliente</button>
-                    </div>
-                </form>
-            </div>
+                <div class="mb-6">
+                    <label for="categoria" class="block text-sm font-medium text-gray-700 mb-1">Categoria*</label>
+                    <select id="categoria" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                        <option value="Funilaria">Funilaria</option>
+                        <option value="Madeireira">Madeireira</option>
+                        <option value="Industria">Indústria</option>
+                        <option value="Veiculos Pesados">Veículos Pesados</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="cancel-btn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-300">Cancelar</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">Salvar Cliente</button>
+                </div>
+            </form>
         </div>
     </div>
 
     <script type="module">
-        // Importar funções do Firebase
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        // Importações do Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- CONFIGURAÇÃO OBRIGATÓRIA DO FIREBASE ---
-        // Insira aqui as chaves que copiou do seu projeto Firebase.
-        const firebaseConfig = {
-            apiKey: "AIzaSyDPisgGzruxqnXzf9hPlb05uCN3hMozt2s",
-            authDomain: "crm-silva-tintas.firebaseapp.com",
-            projectId: "crm-silva-tintas",
-            storageBucket: "crm-silva-tintas.firebasestorage.app",
-            messagingSenderId: "37152653096",
-            appId: "1:37152653096:web:26343eee0a516de3abda1d",
-            measurementId: "G-PM419Y78GD"
-        };
-        
-        // ---- FIM DA CONFIGURAÇÃO ----
+        // --- Configuração e Inicialização ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        setLogLevel('debug');
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const loadingOverlay = document.getElementById('loading-overlay');
-            let db, auth;
-            let allClients = [];
-            let openedClientId = null;
-            let unsubscribe; // Para parar de ouvir updates quando não for preciso
+        // --- Variáveis de Estado ---
+        let currentUserId = null;
+        let currentUserRole = null; // 'Admin' ou 'Vendas'
+        let unsubscribeFromClients = null; // Para parar de ouvir o snapshot no logout
 
-            try {
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-            } catch (e) {
-                loadingOverlay.innerHTML = `<div class='text-center p-4 max-w-lg mx-auto bg-white rounded-lg shadow-md'><h3 class='font-bold text-red-600 text-lg'>Erro na Configuração do Firebase</h3><p class='text-gray-700 mt-2'>Verifique se copiou as chaves corretamente do site do Firebase.</p></div>`;
+        // --- Elementos do DOM ---
+        const loginView = document.getElementById('login-view');
+        const crmView = document.getElementById('crm-view');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const logoutBtn = document.getElementById('logout-btn');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const adminDashboard = document.getElementById('admin-dashboard');
+        const clientList = document.getElementById('client-list');
+        const clientCount = document.getElementById('client-count');
+        const addClientBtn = document.getElementById('add-client-btn');
+        const clientModal = document.getElementById('client-modal');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const clientForm = document.getElementById('client-form');
+
+        // --- Lógica de Login ---
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (username === 'Admin' && password === 'Admin') {
+                currentUserRole = 'Admin';
+                showCrmView();
+            } else if (username === 'Vendas' && password === 'Vendas') {
+                currentUserRole = 'Vendas';
+                showCrmView();
+            } else {
+                loginError.textContent = 'Login ou senha inválidos.';
+            }
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            currentUserRole = null;
+            loginError.textContent = '';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+
+            // Para de ouvir as atualizações do Firestore
+            if (unsubscribeFromClients) {
+                unsubscribeFromClients();
+            }
+            
+            showLoginView();
+        });
+
+        function showCrmView() {
+            loginView.classList.remove('visible-view');
+            loginView.classList.add('hidden-view');
+            crmView.classList.remove('hidden-view');
+            crmView.classList.add('visible-view');
+            
+            welcomeMessage.textContent = `Bem-vindo, ${currentUserRole}!`;
+
+            if (currentUserRole === 'Admin') {
+                adminDashboard.classList.remove('hidden');
+            } else {
+                adminDashboard.classList.add('hidden');
+            }
+            
+            // Inicia a conexão com o Firestore após o login
+            if (!currentUserId) {
+                authenticateAndListen();
+            } else {
+                listenToClients();
+            }
+        }
+
+        function showLoginView() {
+            crmView.classList.remove('visible-view');
+            crmView.classList.add('hidden-view');
+            loginView.classList.remove('hidden-view');
+            loginView.classList.add('visible-view');
+        }
+
+        // --- Autenticação Firebase ---
+        async function authenticateAndListen() {
+             onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    currentUserId = user.uid;
+                    console.log("Usuário Firebase autenticado:", currentUserId);
+                    listenToClients();
+                } else {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Erro na autenticação Firebase:", error);
+                    }
+                }
+            });
+        }
+
+        // --- Lógica do Firestore ---
+        const clientsCollectionRef = collection(db, `artifacts/${appId}/public/data/clientes`);
+
+        function listenToClients() {
+            if (unsubscribeFromClients) {
+                unsubscribeFromClients(); // Garante que não haja listeners duplicados
+            }
+            unsubscribeFromClients = onSnapshot(clientsCollectionRef, (snapshot) => {
+                const allClients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Ordena por data de criação, mais recente primeiro
+                allClients.sort((a, b) => b.criadoEm.toDate() - a.criadoEm.toDate());
+
+                renderClientList(allClients);
+                
+                if (currentUserRole === 'Admin') {
+                    renderAdminDashboard(allClients);
+                }
+            }, (error) => {
+                console.error("Erro ao buscar clientes:", error);
+                clientList.innerHTML = `<p class="text-red-500 col-span-full text-center">Erro ao carregar dados.</p>`;
+            });
+        }
+
+        // --- Renderização ---
+        function renderClientList(clients) {
+            clientList.innerHTML = '';
+            clientCount.textContent = clients.length;
+
+            if (clients.length === 0) {
+                clientList.innerHTML = `<p class="text-gray-500 col-span-full text-center">Nenhum cliente cadastrado.</p>`;
                 return;
             }
 
-            const appDiv = document.getElementById('app');
-            const tableBody = document.getElementById('client-table-body');
-            const searchInput = document.getElementById('search');
-            const segmentFilter = document.getElementById('filter-segment');
-            const dashboard = document.getElementById('dashboard');
-            const clientModal = document.getElementById('client-modal');
-            const clientModalContent = document.getElementById('modal-content');
-            const addClientModal = document.getElementById('add-client-modal');
-            const addClientModalContent = document.getElementById('add-modal-content');
-            const addClientBtn = document.getElementById('add-client-btn');
-            const addClientForm = document.getElementById('add-client-form');
-            const cancelAddBtn = document.getElementById('cancel-add-btn');
-            const noResultsDiv = document.getElementById('no-results');
+            clients.forEach(client => {
+                const clientCard = createClientCard(client.id, client);
+                clientList.appendChild(clientCard);
+            });
+        }
 
-            const statusClasses = { "Não contatado": "status-nao-contatado", "Contatado": "status-contatado", "Em negociação": "status-em-negociacao", "Cliente": "status-cliente", "Perdido": "status-perdido" };
-            const statusOrder = { "Não contatado": 1, "Contatado": 2, "Em negociação": 3, "Cliente": 4, "Perdido": 5 };
-            
-            onAuthStateChanged(auth, user => {
-                if (user) {
-                    if (unsubscribe) unsubscribe(); // Cancela o listener anterior se existir
-                    const clientsCollection = collection(db, "clients");
-                    unsubscribe = onSnapshot(clientsCollection, (snapshot) => {
-                        allClients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        renderTable();
-                        renderDashboard();
-                        if (openedClientId) {
-                            const clientData = allClients.find(c => c.id === openedClientId);
-                            clientData ? openDetailsModal(openedClientId, false) : closeDetailsModal();
-                        }
-                        loadingOverlay.classList.add('hidden');
-                        appDiv.classList.remove('hidden');
-                    }, (error) => {
-                        loadingOverlay.innerHTML = `<div class='text-center p-4 max-w-lg mx-auto bg-white rounded-lg shadow-md'><h3 class='font-bold text-red-600 text-lg'>Falha na Ligação</h3><p class='text-gray-700 mt-2'>Verifique se ativou o <strong>Cloud Firestore</strong> e atualizou as <strong>Regras de Segurança</strong> no seu projeto Firebase.</p></div>`;
-                    });
-                } else {
-                    signInAnonymously(auth).catch(error => {
-                        loadingOverlay.innerHTML = `<div class='text-center p-4 max-w-lg mx-auto bg-white rounded-lg shadow-md'><h3 class='font-bold text-red-600 text-lg'>Falha na Autenticação</h3><p class='text-gray-700 mt-2'>Verifique se ativou o login <strong>"Anônimo"</strong> no painel de <strong>Authentication</strong> do Firebase.</p></div>`;
-                    });
-                }
+        function renderAdminDashboard(clients) {
+            const totalClients = clients.length;
+            if (totalClients === 0) {
+                document.getElementById('conversion-rate').textContent = '0%';
+                document.getElementById('category-count').innerHTML = '<li>Nenhum cliente</li>';
+                document.getElementById('top-segment').textContent = '-';
+                return;
+            }
+
+            // 1. Taxa de Conversão
+            const convertedClients = clients.filter(c => c.status === 'Cliente').length;
+            const conversionRate = (convertedClients / totalClients) * 100;
+            document.getElementById('conversion-rate').textContent = `${conversionRate.toFixed(1)}%`;
+
+            // 2. Contagem por Categoria
+            const categoryCount = clients.reduce((acc, client) => {
+                acc[client.categoria] = (acc[client.categoria] || 0) + 1;
+                return acc;
+            }, {});
+
+            const categoryListEl = document.getElementById('category-count');
+            categoryListEl.innerHTML = '';
+            Object.entries(categoryCount).sort(([,a],[,b]) => b-a).forEach(([category, count]) => {
+                const li = document.createElement('li');
+                li.className = "flex justify-between";
+                li.innerHTML = `<span>${category}</span> <span class="font-bold">${count}</span>`;
+                categoryListEl.appendChild(li);
             });
 
-            const renderDashboard = () => {
-                const total = allClients.length;
-                const naoContatado = allClients.filter(c => c.status === 'Não contatado').length;
-                const contatado = allClients.filter(c => c.status === 'Contatado').length;
-                const emNegociacao = allClients.filter(c => c.status === 'Em negociação').length;
-                const cliente = allClients.filter(c => c.status === 'Cliente').length;
-                dashboard.innerHTML = `<div class="bg-white p-4 rounded-lg shadow-sm text-center"><p class="text-2xl font-bold text-[#0A3D62]">${total}</p><p class="text-sm text-gray-500">Total</p></div><div class="bg-white p-4 rounded-lg shadow-sm text-center"><p class="text-2xl font-bold text-gray-600">${naoContatado}</p><p class="text-sm text-gray-500">Não Contatados</p></div><div class="bg-white p-4 rounded-lg shadow-sm text-center"><p class="text-2xl font-bold text-blue-600">${contatado}</p><p class="text-sm text-gray-500">Contatados</p></div><div class="bg-white p-4 rounded-lg shadow-sm text-center"><p class="text-2xl font-bold text-yellow-600">${emNegociacao}</p><p class="text-sm text-gray-500">Em Negociação</p></div><div class="bg-white p-4 rounded-lg shadow-sm text-center"><p class="text-2xl font-bold text-green-600">${cliente}</p><p class="text-sm text-gray-500">Clientes</p></div>`;
-            };
+            // 3. Segmento Mais Explorado
+            const topSegment = Object.keys(categoryCount).reduce((a, b) => categoryCount[a] > categoryCount[b] ? a : b, '-');
+            document.getElementById('top-segment').textContent = topSegment;
+        }
 
-            const renderTable = () => {
-                const searchTerm = searchInput.value.toLowerCase();
-                const selectedSegment = segmentFilter.value;
-                const filteredClients = allClients.filter(client => (client.name.toLowerCase().includes(searchTerm)) && (selectedSegment === 'todos' || client.segment === selectedSegment));
-                tableBody.innerHTML = '';
-                noResultsDiv.classList.toggle('hidden', filteredClients.length > 0);
-                filteredClients.sort((a, b) => statusOrder[a.status] - statusOrder[b.status] || a.name.localeCompare(b.name)).forEach(client => {
-                    const row = document.createElement('tr');
-                    row.className = 'border-b border-gray-200 hover:bg-gray-50';
-                    row.innerHTML = `<td class="px-6 py-4 whitespace-nowrap"><p class="font-semibold text-gray-900">${client.name}</p><p class="text-sm text-gray-500">${client.address ? client.address.split(',').pop().trim() : ''}</p></td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${client.segment}</td><td class="px-6 py-4 whitespace-nowrap"><span class="status-badge ${statusClasses[client.status]}">${client.status}</span></td><td class="px-6 py-4 whitespace-nowrap text-right"><button data-id="${client.id}" class="view-details-btn text-sm font-medium text-[#0A3D62] hover:text-[#1E90FF]">Detalhes</button></td>`;
-                    tableBody.appendChild(row);
-                });
-            };
-
-            const openDetailsModal = (clientId, animate = true) => {
-                openedClientId = clientId;
-                const client = allClients.find(c => c.id === clientId);
-                if (!client) return;
-                clientModalContent.innerHTML = `<div class="p-6"><div class="flex justify-between items-start mb-4"><div><h2 class="text-2xl font-bold text-gray-900">${client.name}</h2><p class="text-sm text-gray-500">${client.address || ''}</p><p class="text-sm text-gray-500">${client.contact || ''}</p></div><button id="close-modal-btn" class="p-1 rounded-full hover:bg-gray-200">&times;</button></div><div class="grid md:grid-cols-2 gap-6 mb-6"><div><label for="status-select" class="block text-sm font-medium text-gray-700 mb-1">Status</label><select id="status-select" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-white"><option value="Não contatado" ${client.status === 'Não contatado' ? 'selected' : ''}>Não contatado</option><option value="Contatado" ${client.status === 'Contatado' ? 'selected' : ''}>Contatado</option><option value="Em negociação" ${client.status === 'Em negociação' ? 'selected' : ''}>Em negociação</option><option value="Cliente" ${client.status === 'Cliente' ? 'selected' : ''}>Cliente</option><option value="Perdido" ${client.status === 'Perdido' ? 'selected' : ''}>Perdido</option></select></div><div class="self-end"><button id="save-status-btn" class="w-full bg-[#0A3D62] text-white font-bold py-2 px-4 rounded-md hover:bg-[#1E90FF] transition">Salvar Alterações</button></div></div><div><h3 class="text-lg font-semibold text-gray-800 mb-2">Anotações</h3><div id="notes-container" class="space-y-3 mb-4 max-h-48 overflow-y-auto bg-gray-50 p-3 rounded-md">${client.notes && client.notes.length > 0 ? [...client.notes].reverse().map(note => `<div class="text-sm border-b border-gray-200 pb-2"><p class="text-gray-700">${note.text}</p><p class="text-xs text-gray-400 mt-1">${note.date}</p></div>`).join('') : '<p class="text-sm text-gray-400">Nenhuma anotação.</p>'}</div><div class="flex gap-2"><input type="text" id="new-note-input" placeholder="Adicionar nova anotação..." class="flex-grow px-3 py-2 border border-gray-300 rounded-md"><button id="add-note-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md hover:bg-gray-300 transition">Adicionar</button></div></div><div class="mt-6 pt-4 border-t border-gray-200 text-right"><button id="delete-client-btn" class="text-sm text-red-600 hover:text-red-800 font-medium py-2 px-3 rounded-md hover:bg-red-50">Excluir Cliente</button></div></div>`;
-                clientModal.classList.remove('hidden');
-                if (animate) setTimeout(() => clientModalContent.classList.remove('scale-95', 'opacity-0'), 10);
-                else clientModalContent.classList.remove('scale-95', 'opacity-0');
-                document.getElementById('close-modal-btn').addEventListener('click', closeDetailsModal);
-                document.getElementById('save-status-btn').addEventListener('click', () => saveClientData(clientId));
-                document.getElementById('add-note-btn').addEventListener('click', () => addNote(clientId));
-                document.getElementById('delete-client-btn').addEventListener('click', () => handleDeleteClient(clientId));
-            };
-
-            const closeDetailsModal = () => { openedClientId = null; clientModalContent.classList.add('scale-95', 'opacity-0'); setTimeout(() => clientModal.classList.add('hidden'), 300); };
-            const openAddModal = () => { addClientModal.classList.remove('hidden'); setTimeout(() => addClientModalContent.classList.remove('scale-95', 'opacity-0'), 10); };
-            const closeAddModal = () => { addClientForm.reset(); addClientModalContent.classList.add('scale-95', 'opacity-0'); setTimeout(() => addClientModal.classList.add('hidden'), 300); };
-
-            const saveClientData = async (clientId) => { await updateDoc(doc(db, "clients", clientId), { status: document.getElementById('status-select').value }); closeDetailsModal(); };
-            const addNote = async (clientId) => {
-                const noteInput = document.getElementById('new-note-input');
-                if (noteInput.value.trim()) {
-                    const newNote = { text: noteInput.value.trim(), date: new Date().toLocaleString('pt-BR') };
-                    await updateDoc(doc(db, "clients", clientId), { notes: arrayUnion(newNote) });
-                }
-            };
-            
-            const handleDeleteClient = (clientId) => {
-                const deleteBtn = document.getElementById('delete-client-btn');
-                deleteBtn.parentElement.innerHTML = `<p class="text-sm text-gray-800 mr-4">Tem certeza?</p><button id="confirm-delete-btn" class="bg-red-600 text-white font-bold py-1 px-3 rounded-md hover:bg-red-700">Sim</button><button id="cancel-delete-btn" class="text-sm text-gray-600 ml-2 py-1 px-3 rounded-md hover:bg-gray-200">Cancelar</button>`;
-                document.getElementById('confirm-delete-btn').addEventListener('click', async () => { await deleteDoc(doc(db, "clients", clientId)); closeDetailsModal(); });
-                document.getElementById('cancel-delete-btn').addEventListener('click', () => openDetailsModal(clientId, false));
-            };
-            
-            const handleAddNewClient = async (e) => {
-                e.preventDefault();
-                const name = document.getElementById('new-client-name').value.trim();
-                if (!name) return;
-                await addDoc(collection(db, "clients"), { name: name, address: document.getElementById('new-client-address').value, contact: document.getElementById('new-client-contact').value, segment: document.getElementById('new-client-segment').value, status: 'Não contatado', notes: [], createdAt: serverTimestamp() });
-                closeAddModal();
-            };
-            
-            tableBody.addEventListener('click', (e) => e.target.classList.contains('view-details-btn') && openDetailsModal(e.target.dataset.id));
-            clientModal.addEventListener('click', (e) => e.target.id === 'client-modal' && closeDetailsModal());
-            addClientBtn.addEventListener('click', openAddModal);
-            cancelAddBtn.addEventListener('click', closeAddModal);
-            addClientModal.addEventListener('click', (e) => e.target.id === 'add-client-modal' && closeAddModal());
-            addClientForm.addEventListener('submit', handleAddNewClient);
-            searchInput.addEventListener('input', renderTable);
-            segmentFilter.addEventListener('change', renderTable);
+        // --- Lógica do Modal de Cliente ---
+        addClientBtn.addEventListener('click', () => clientModal.classList.remove('hidden'));
+        cancelBtn.addEventListener('click', () => clientModal.classList.add('hidden'));
+        clientModal.addEventListener('click', (e) => {
+            if (e.target === clientModal) clientModal.classList.add('hidden');
         });
+
+        // --- CRUD (Create, Update, Delete) ---
+        clientForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newClient = {
+                empresa: document.getElementById('empresa').value.trim(),
+                endereco: document.getElementById('endereco').value.trim(),
+                telefone: document.getElementById('telefone').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                vendedor: document.getElementById('vendedor').value.trim(),
+                categoria: document.getElementById('categoria').value,
+                status: 'Não contatado',
+                criadoEm: new Date(),
+                criadoPor: currentUserId
+            };
+            try {
+                await addDoc(clientsCollectionRef, newClient);
+                clientModal.classList.add('hidden');
+                clientForm.reset();
+            } catch (error) {
+                console.error("Erro ao adicionar cliente:", error);
+            }
+        });
+
+        async function updateClientStatus(id, newStatus) {
+            const clientDocRef = doc(db, `artifacts/${appId}/public/data/clientes`, id);
+            await updateDoc(clientDocRef, { status: newStatus });
+        }
+
+        async function deleteClient(id) {
+            const clientDocRef = doc(db, `artifacts/${appId}/public/data/clientes`, id);
+            await deleteDoc(clientDocRef);
+        }
+
+        // --- Criação do Card do Cliente (UI) ---
+        function createClientCard(id, data) {
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg shadow-md p-5 flex flex-col justify-between transition-transform transform hover:-translate-y-1';
+            
+            const categoryColors = { 'Funilaria': 'bg-purple-100 text-purple-800', 'Madeireira': 'bg-yellow-100 text-yellow-800', 'Industria': 'bg-red-100 text-red-800', 'Veiculos Pesados': 'bg-gray-200 text-gray-800', 'Outro': 'bg-blue-100 text-blue-800' };
+            const statusColors = { 'Não contatado': 'bg-gray-200 text-gray-800', 'Contatado': 'bg-blue-200 text-blue-800', 'Em negociação': 'bg-yellow-200 text-yellow-800', 'Cliente': 'bg-green-200 text-green-800' };
+            const statusOptions = ['Não contatado', 'Contatado', 'Em negociação', 'Cliente'];
+
+            card.innerHTML = `
+                <div>
+                    <div class="flex justify-between items-start mb-3">
+                        <h3 class="text-lg font-bold text-gray-900 pr-2">${data.empresa}</h3>
+                        <span class="text-xs font-semibold px-2 py-1 rounded-full ${categoryColors[data.categoria] || 'bg-gray-100'}">${data.categoria}</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-1"><span class="font-semibold">Endereço:</span> ${data.endereco}</p>
+                    ${data.telefone ? `<p class="text-sm text-gray-600 mb-1"><span class="font-semibold">Telefone:</span> ${data.telefone}</p>` : ''}
+                    ${data.email ? `<p class="text-sm text-gray-600 mb-1"><span class="font-semibold">Email:</span> ${data.email}</p>` : ''}
+                    <p class="text-sm text-gray-600 mb-4"><span class="font-semibold">Vendedor:</span> ${data.vendedor}</p>
+                </div>
+                <div class="mt-auto pt-4 border-t border-gray-200">
+                    <div class="flex justify-between items-center">
+                         <select class="status-select w-full text-sm font-semibold p-2 rounded-md border-gray-300 focus:ring-blue-500 focus:border-blue-500 ${statusColors[data.status]}">
+                            ${statusOptions.map(opt => `<option value="${opt}" ${opt === data.status ? 'selected' : ''}>${opt}</option>`).join('')}
+                        </select>
+                        <button class="delete-btn text-gray-400 hover:text-red-600 transition duration-300 ml-3 flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            card.querySelector('.status-select').addEventListener('change', (e) => updateClientStatus(id, e.target.value));
+            card.querySelector('.delete-btn').addEventListener('click', () => deleteClient(id));
+
+            return card;
+        }
+
     </script>
 </body>
 </html>
