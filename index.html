@@ -35,9 +35,25 @@
         .form-input {
             @apply block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm;
         }
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 antialiased">
+    <div id="loading-overlay" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
+        <div class="loading-spinner"></div>
+        <p class="mt-4 text-gray-600">Carregando calendário...</p>
+    </div>
+
     <div class="container mx-auto p-4 sm:p-6 lg:p-8">
         <header class="text-center mb-8">
             <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">Silva Tintas Automotivas</h1>
@@ -76,34 +92,140 @@
         </div>
     </div>
 
-    <script>
-        // --- DATA ---
-        let contentData = {
-            // Initial data structure
-            1: { feed: { type: "Reel", pillar: "Técnica & Tutorial", persona: "Especialista em Estética, Restaurador Detalhista", brand: "Norton", title: "O Segredo do Brilho Espelhado", description: "Reel dinâmico mostrando as 3 fases do polimento Norton em um painel preto. Foco em closes e texto sobreposto para demonstrar a transformação.", cta: "Pronto para levar seu brilho ao próximo nível? Visite nossa loja e monte seu kit de polimento Norton completo!" }, stories: { theme: "Segunda da Técnica", description: "Dica rápida em vídeo, curiosidade técnica e enquete 'Mito ou Verdade' sobre pintura." } },
-            3: { feed: { type: "Carrossel", pillar: "Performance & Produtividade", persona: "Funileiro Profissional", brand: "Farben", title: "Menos Tempo na Cabine, Mais Lucro", description: "Carrossel comparando o tempo de secagem do Verniz Fast Dry da Farben com um verniz convencional, incluindo um depoimento sobre ganho de produtividade.", cta: "Acelere sua produção. Fale com nossos consultores e descubra a linha High Performance da Farben." }, stories: { theme: "Quarta do Cliente", description: "Unboxing de produtos novos, compartilhamento de projetos de clientes e 'Batalha de Projetos' em enquete." } },
-            5: { feed: { type: "Estático", pillar: "Paixão & Perfeição", persona: "Restaurador Detalhista", brand: "Sikkens", title: "A Assinatura dos Mestres", description: "Foto de alta qualidade de um detalhe de um carro clássico restaurado, com brilho impecável. A legenda fala sobre tradição e a busca pela perfeição.", cta: "Qual clássico você está restaurando? Conte pra gente nos comentários! #SikkensClassic" }, stories: { theme: "Sexta do Projeto Finalizado", description: "Teaser e revelação de um projeto 'antes e depois', finalizando com um vídeo satisfatório de 'Sextou com Brilho'." } },
-            // Add more initial data as needed...
+    <script type="module">
+        // --- FIREBASE SETUP ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+        
+        // Your web app's Firebase configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+            apiKey: "AIzaSyDPisgGzruxqnXzf9hPlb05uCN3hMozt2s",
+            authDomain: "crm-silva-tintas.firebaseapp.com",
+            projectId: "crm-silva-tintas",
+            storageBucket: "crm-silva-tintas.firebasestorage.app",
+            messagingSenderId: "37152653096",
+            appId: "1:37152653096:web:7cf6864a5740ac94abda1d",
+            measurementId: "G-KQ2N5EYNR5"
         };
 
-        // --- CALENDAR LOGIC ---
+        // Initialize Firebase and related services
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const analytics = getAnalytics(app);
+        
+        // --- INITIAL DATA (for first-time setup) ---
+        const initialContentData = {
+            "9-1": { stories: { theme: "Domingo de Relax", description: "Conteúdo leve e enquete sobre os projetos da semana." } },
+            "9-2": { feed: { type: "Reel", brand: "Maxi Rubber", title: "Preparação é Tudo!", description: "Reel acelerado mostrando a correta aplicação e lixamento da massa poliéster da Maxi Rubber.", cta: "Uma base perfeita começa aqui. Linha completa Maxi Rubber na nossa loja!" }, stories: { theme: "Segunda da Técnica", description: "Dica rápida sobre catálise de massa." } },
+            "9-3": { stories: { theme: "Terça Tira-Dúvidas", description: "Caixa de perguntas sobre preparação de superfície." } },
+            "9-4": { feed: { type: "Carrossel", brand: "Wanda", title: "Seu Tempo Vale Ouro", description: "Carrossel comparando o tempo de ciclo de um reparo rápido usando o sistema de secagem rápida da Wanda.", cta: "Mais carros por dia, mais lucro no fim do mês. Conheça as soluções rápidas da Wanda!" }, stories: { theme: "Quarta do Cliente", description: "Mostrando um cliente buscando uma cor personalizada." } },
+            "9-5": { stories: { theme: "Quinta de Bastidores", description: "Dia a dia na máquina de tintas." } },
+            "9-6": { feed: { type: "Estático", brand: "Sikkens", title: "A Escolha dos Campeões", description: "Foto de um carro de exposição ou de um restaurador parceiro, com menção à escolha pela linha Sikkens.", cta: "Quando o resultado precisa ser perfeito, a escolha é Sikkens." }, stories: { theme: "Sexta do Projeto Finalizado", description: "Revelação de um projeto de cliente." } },
+            "9-7": { stories: { theme: "Sábado de Inspiração", description: "Feriado da Independência. Posts com carros nas cores do Brasil." } },
+            "9-8": { stories: { theme: "Domingo de Relax", description: "Enquete: qual o próximo projeto?" } },
+            "9-9": { feed: { type: "Reel", brand: "Montana Química", title: "Madeira Renovada", description: "Reel satisfatório de 'antes e depois' mostrando a aplicação do Osmocolor Stain.", cta: "Não é só para carros! Renove qualquer madeira com Montana." }, stories: { theme: "Segunda da Técnica", description: "Dica sobre como aplicar stain." } },
+            "9-10": { stories: { theme: "Terça Tira-Dúvidas", description: "Perguntas e respostas sobre vernizes para madeira." } },
+            "9-11": { feed: { type: "Carrossel", brand: "Norton", title: "Qual Lixa Usar?", description: "Guia visual simples sobre a granulação de lixas para cada etapa do processo.", cta: "A lixa certa faz toda a diferença. Salve este post e acerte na escolha!" }, stories: { theme: "Quarta do Cliente", description: "Cliente comprando lixas e discos." } },
+            "9-12": { stories: { theme: "Quinta de Bastidores", description: "Organizando o estoque de abrasivos." } },
+            "9-13": { feed: { type: "Reel", brand: "Todas", title: "Noite dos Clássicos", description: "Vídeo com os melhores momentos de um encontro de carros local.", cta: "Adoramos fazer parte dessa paixão! Marque a gente no seu próximo encontro!" }, stories: { theme: "Sexta do Projeto Finalizado", description: "Vídeo com brilho de carro polido." } },
+            "9-14": { stories: { theme: "Sábado de Inspiração", description: "Compartilhando fotos de carros de eventos locais." } },
+            "9-15": { stories: { theme: "Domingo de Relax", description: "Planos para a semana." } },
+            "9-16": { feed: { type: "Reel", brand: "Farben", title: "Aplicação Sem Esforço", description: "Vídeo mostrando a aplicação suave e o excelente alastramento do Verniz Fast Dry da Farben.", cta: "Menos esforço, mais qualidade. Experimente a aplicação dos vernizes Farben." }, stories: { theme: "Segunda da Técnica", description: "Dica de regulagem da pistola para verniz." } },
+            "9-17": { stories: { theme: "Terça Tira-Dúvidas", description: "Caixa de perguntas sobre aplicação de verniz." } },
+            "9-18": { feed: { type: "Estático", brand: "Maxi Rubber", title: "Mascaramento Profissional", description: "Foto de um carro perfeitamente mascarado, com 3 dicas para um mascaramento sem falhas.", cta: "Evite o retrabalho. Temos fitas e materiais de mascaramento da mais alta qualidade." }, stories: { theme: "Quarta do Cliente", description: "Unboxing de fitas de mascaramento." } },
+            "9-19": { stories: { theme: "Quinta de Bastidores", description: "Apresentando um membro da equipe." } },
+            "9-20": { feed: { type: "Carrossel", brand: "Wanda", title: "Cores que Fizeram História", description: "Carrossel com fotos de carros clássicos e suas cores icônicas.", cta: "Qual cor clássica é a sua favorita? Nós fazemos na hora para o seu projeto!" }, stories: { theme: "Sexta do Projeto Finalizado", description: "Antes e depois de uma restauração." } },
+            "9-21": { stories: { theme: "Sábado de Inspiração", description: "Fotos de carros customizados." } },
+            "9-22": { stories: { theme: "Domingo de Relax", description: "Enquete sobre cores de carros." } },
+            "9-23": { feed: { type: "Reel", brand: "Norton", title: "Visão Cristalina", description: "Reel mostrando o processo completo de lixamento e polimento de um farol.", cta: "Não troque, recupere! Kit de polimento de faróis Norton disponível." }, stories: { theme: "Segunda da Técnica", description: "Dica sobre proteção UV para faróis." } },
+            "9-24": { stories: { theme: "Terça Tira-Dúvidas", description: "Perguntas sobre manutenção de faróis." } },
+            "9-25": { feed: { type: "Carrossel", brand: "Sikkens", title: "A Ciência por Trás do Brilho", description: "Carrossel explicando a tecnologia dos vernizes Alto Sólidos da Sikkens.", cta: "Tecnologia que você vê no resultado final. Converse com nossos especialistas." }, stories: { theme: "Quarta do Cliente", description: "Cliente satisfeito com o resultado do verniz Sikkens." } },
+            "9-26": { stories: { theme: "Quinta de Bastidores", description: "Mostrando o laboratório de cores." } },
+            "9-27": { feed: { type: "Reel", brand: "Cliente", title: "Transformação da Semana", description: "Compilado de vídeos de um projeto de cliente, do início ao fim.", cta: "Quer ver seu projeto aqui? Mande pra gente no direct!" }, stories: { theme: "Sexta do Projeto Finalizado", description: "Vídeo de 'sextou com brilho'." } },
+            "9-28": { stories: { theme: "Sábado de Inspiração", description: "Cobertura de evento local, se houver." } },
+            "9-29": { stories: { theme: "Domingo de Relax", description: "Planejando a próxima semana." } },
+            "9-30": { feed: { type: "Carrossel", brand: "Wanda/Farben", title: "Primer PU vs. Primer Universal", description: "Infográfico comparando os benefícios do Primer PU com um primer mais simples.", cta: "A base certa é o segredo do sucesso. Escolha o primer ideal para cada reparo." }, stories: { theme: "Segunda da Técnica", description: "Dica sobre diluição de primer." } },
+            "10-1": { stories: { theme: "Terça Tira-Dúvidas", description: "Caixa de perguntas sobre primers e preparação." } },
+            "10-2": { feed: { type: "Reel", brand: "Maxi Rubber", title: "Reparo de Plástico? Sim!", description: "Vídeo demonstrando a aplicação do Veda-Choque da Maxi Rubber para reparar um para-choque trincado.", cta: "Não descarte, repare! Soluções Maxi Rubber para plásticos." }, stories: { theme: "Quarta do Cliente", description: "Cliente comprando produtos para reparo de plástico." } },
+            "10-3": { stories: { theme: "Quinta de Bastidores", description: "Recebendo mercadoria nova." } },
+            "10-4": { feed: { type: "Estático", brand: "Sikkens", title: "Acabamento de Prestígio", description: "Foto de alta resolução de um carro de luxo, destacando a perfeição da pintura. Legenda sobre a reputação da Sikkens em acabamentos premium.", cta: "Para projetos que exigem o melhor, exija Sikkens." }, stories: { theme: "Sexta do Projeto Finalizado", description: "Revelação de um carro de alto padrão." } },
+            "10-5": { stories: { theme: "Sábado de Inspiração", description: "Carros exóticos e superesportivos." } },
+            "10-6": { stories: { theme: "Domingo de Relax", description: "Enquete: qual supercarro você teria?" } },
+            "10-7": { feed: { type: "Reel", brand: "Norton", title: "Corte Rápido, Acabamento Fino", description: "Vídeo satisfatório mostrando um disco de lixa da Norton removendo material rapidamente, mas deixando uma superfície uniforme.", cta: "Eficiência e qualidade no lixamento. Conheça a linha de abrasivos Norton." }, stories: { theme: "Segunda da Técnica", description: "Dica de como não marcar a peça ao lixar." } },
+            "10-8": { stories: { theme: "Terça Tira-Dúvidas", description: "Perguntas sobre lixamento e preparação." } },
+            "10-9": { feed: { type: "Carrossel", brand: "Wanda", title: "Proteção Anticorrosiva", description: "Carrossel explicando a importância do wash primer e dos primers fosfatizantes da Wanda na proteção da chapa nua.", cta: "Proteja seu trabalho desde o início. Linha completa de primers Wanda." }, stories: { theme: "Quarta do Cliente", description: "Cliente buscando solução para ferrugem." } },
+            "10-10": { stories: { theme: "Quinta de Bastidores", description: "Demonstração de produto para a equipe." } },
+            "10-11": { feed: { type: "Reel", brand: "Todas", title: "O Som da Oficina", description: "Reel com áudio ASMR: o som da lixadeira, da pistola de pintura, do polimento. Uma homenagem aos profissionais.", cta: "Respeito máximo por quem faz a mágica acontecer. #ProfissionalDaRepintura" }, stories: { theme: "Sexta do Projeto Finalizado", description: "Projeto finalizado com som ambiente." } },
+            "10-12": { stories: { theme: "Sábado de Inspiração", description: "Feriado. Conteúdo leve sobre carros e família." } },
+            "10-13": { stories: { theme: "Domingo de Relax", description: "Planos para a semana." } },
+            "10-14": { feed: { type: "Reel", brand: "Montana Química", title: "Deck como Novo!", description: "Vídeo timelapse da restauração de um deck de madeira usando produtos da Montana, do lixamento à aplicação do verniz.", cta: "Sua área externa merece esse cuidado. Linha completa Montana para decks e jardins." }, stories: { theme: "Segunda da Técnica", description: "Dica sobre manutenção de decks." } },
+            "10-15": { stories: { theme: "Terça Tira-Dúvidas", description: "Perguntas sobre produtos para área externa." } },
+            "10-16": { feed: { type: "Estático", brand: "Farben", title: "Tinta Poliéster: Cores Vibrantes", description: "Imagem com uma paleta de cores vibrantes, destacando a qualidade e a variedade da base poliéster da Farben.", cta: "A cor dos seus sonhos está aqui. Sistema tintométrico Farben com milhares de opções." }, stories: { theme: "Quarta do Cliente", description: "Cliente escolhendo uma cor vibrante no leque." } },
+            "10-17": { stories: { theme: "Quinta de Bastidores", description: "Manutenção da máquina de tintas." } },
+            "10-18": { feed: { type: "Carrossel", brand: "Maxi Rubber", title: "Guia de Produtos Maxi Rubber", description: "Carrossel 'Este ou Aquele?' comparando produtos da Maxi Rubber para diferentes situações (ex: Massa Poliéster vs. Massa para Plástico).", cta: "Tem uma solução para cada necessidade. Salve este guia e consulte sempre!" }, stories: { theme: "Sexta do Projeto Finalizado", description: "Antes e depois de um reparo complexo." } },
+            "10-19": { stories: { theme: "Sábado de Inspiração", description: "Projetos de customização e personalização." } },
+            "10-20": { stories: { theme: "Domingo de Relax", description: "Enquete: qual customização você faria no seu carro?" } },
+            "10-21": { feed: { type: "Reel", brand: "Sikkens", title: "O Teste do Reflexo", description: "Vídeo em close-up mostrando um objeto (como o logo da Sikkens) refletido com nitidez total em uma peça envernizada com Autoclear.", cta: "O verdadeiro teste da qualidade está no reflexo. Acabamento espelhado é com Sikkens." }, stories: { theme: "Segunda da Técnica", description: "Dica para evitar 'casca de laranja'." } },
+            "10-22": { stories: { theme: "Terça Tira-Dúvidas", description: "Perguntas sobre aplicação de verniz e polimento." } },
+            "10-23": { feed: { type: "Carrossel", brand: "Norton", title: "Segurança em Primeiro Lugar", description: "Carrossel destacando a linha de EPIs da Norton (máscaras, luvas, óculos), com dicas de segurança para o pintor.", cta: "Trabalhe com paixão, mas sempre com segurança. Linha completa de EPIs Norton." }, stories: { theme: "Quarta do Cliente", description: "Cliente comprando kit de segurança." } },
+            "10-24": { stories: { theme: "Quinta de Bastidores", description: "Treinamento de segurança com a equipe." } },
+            "10-25": { feed: { type: "Reel", brand: "Cliente", title: "Do Rascunho à Realidade", description: "Reel mostrando um projeto de restauração de um cliente, desde fotos antigas até o resultado final brilhando.", cta: "Histórias que nos inspiram. Obrigado por nos deixar fazer parte da sua!" }, stories: { theme: "Sexta do Projeto Finalizado", description: "Depoimento em vídeo de um cliente satisfeito." } },
+            "10-26": { stories: { theme: "Sábado de Inspiração", description: "Visitando uma oficina parceira." } },
+            "10-27": { stories: { theme: "Domingo de Relax", description: "Planejando os últimos dias do mês." } },
+            "10-28": { feed: { type: "Reel", brand: "Wanda", title: "Acerto de Cor na Prática", description: "Vídeo mostrando o uso do espectrofotômetro da Wanda em um carro, a fórmula aparecendo no computador e a tinta sendo feita na hora.", cta: "Tecnologia a serviço da perfeição. Acerto de cor garantido." }, stories: { theme: "Segunda da Técnica", description: "Dica sobre como fazer o 'test-drive' da cor." } },
+            "10-29": { stories: { theme: "Terça Tira-Dúvidas", description: "Perguntas sobre colorimetria." } },
+            "10-30": { feed: { type: "Carrossel", brand: "Todas", title: "Seu Kit Essencial", description: "Carrossel mostrando 'kits' para diferentes perfis: Kit do Restaurador (Sikkens, Wanda), Kit do Produtivo (Farben, Norton), Kit do Detailer (Norton).", cta: "Qual kit é o seu? Montamos na hora para você!" }, stories: { theme: "Quarta do Cliente", description: "Cliente montando um kit personalizado." } },
+            "10-31": { stories: { theme: "Quinta de Bastidores", description: "Preparando a loja para o próximo mês." } },
+        };
+
+        // --- GLOBAL VARIABLES ---
+        let contentData = {};
         const calendarGrid = document.getElementById('calendar-grid');
         const monthYearEl = document.getElementById('month-year');
         const prevMonthBtn = document.getElementById('prev-month');
         const nextMonthBtn = document.getElementById('next-month');
-        
         const modal = document.getElementById('modal');
         const modalContainer = modal.querySelector('div');
         const modalTitle = document.getElementById('modal-title');
-        const modalContent = document.getElementById('modal-content');
         const modalFooter = document.getElementById('modal-footer');
         const contentForm = document.getElementById('content-form');
         const closeModalBtn = document.getElementById('close-modal');
+        const loadingOverlay = document.getElementById('loading-overlay');
 
         let currentDate = new Date();
         currentDate.setDate(1);
-        let selectedDay = null;
+        let selectedDayKey = null;
 
+        // --- DATA HANDLING ---
+        async function initializeAppLogic() {
+            try {
+                await signInAnonymously(auth);
+                const docRef = doc(db, "calendars", "silva-tintas-content");
+                
+                // Real-time listener
+                onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists() && Object.keys(docSnap.data()).length > 0) {
+                        contentData = docSnap.data();
+                    } else {
+                        console.log("No document found or it's empty! Creating one with initial data.");
+                        contentData = initialContentData;
+                        setDoc(docRef, contentData); // First time setup
+                    }
+                    renderCalendar();
+                    loadingOverlay.style.display = 'none';
+                });
+
+            } catch (error) {
+                console.error("Error initializing app:", error);
+                loadingOverlay.innerHTML = '<p class="text-red-500">Erro ao carregar dados. Tente recarregar a página.</p>';
+            }
+        }
+
+        // --- CALENDAR LOGIC ---
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
@@ -117,8 +239,10 @@
             }
 
             for (let day = 1; day <= lastDateOfMonth; day++) {
+                const dayKey = `${month + 1}-${day}`;
                 const dayEl = document.createElement('div');
                 dayEl.className = 'border border-gray-200 rounded-lg p-2 h-28 sm:h-32 flex flex-col cursor-pointer hover:bg-blue-50 transition-colors relative';
+                dayEl.dataset.dayKey = dayKey;
                 dayEl.dataset.day = day;
 
                 const dayNumber = document.createElement('span');
@@ -131,14 +255,15 @@
                     dayNumber.classList.add('bg-blue-500', 'text-white', 'rounded-full', 'w-7', 'h-7', 'flex', 'items-center', 'justify-center');
                 }
 
-                const content = contentData[day];
+                const content = contentData[dayKey];
                 if (content) {
                     const contentWrapper = document.createElement('div');
                     contentWrapper.className = 'mt-1 space-y-1 overflow-hidden text-xs';
                     if (content.feed && content.feed.title) {
                         const feedPill = document.createElement('div');
-                        feedPill.className = `flex items-center p-1 rounded-md ${content.feed.type === 'Reel' ? 'bg-purple-100 text-purple-800' : content.feed.type === 'Carrossel' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`;
-                        const icon = content.feed.type === 'Reel' ? '🎬' : content.feed.type === 'Carrossel' ? '📑' : '🖼️';
+                        const type = content.feed.type || 'Estático';
+                        feedPill.className = `flex items-center p-1 rounded-md ${type === 'Reel' ? 'bg-purple-100 text-purple-800' : type === 'Carrossel' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`;
+                        const icon = type === 'Reel' ? '🎬' : type === 'Carrossel' ? '📑' : '🖼️';
                         feedPill.innerHTML = `<span class="mr-1">${icon}</span> <span class="font-medium truncate">${content.feed.title}</span>`;
                         contentWrapper.appendChild(feedPill);
                     }
@@ -154,62 +279,33 @@
             }
         }
         
-        function showModal(day) {
-            selectedDay = day;
-            const content = contentData[day] || { feed: {}, stories: {} };
+        function showModal(day, dayKey) {
+            selectedDayKey = dayKey;
+            const content = contentData[dayKey] || { feed: {}, stories: {} };
             const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
             modalTitle.textContent = `Editar Conteúdo - ${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}`;
             
             contentForm.innerHTML = `
                 <div>
-                    <h4 class="text-lg font-bold text-blue-600 mb-2 border-b pb-2">📱 Conteúdo dos Stories</h4>
+                    <h4 class="text-lg font-bold text-pink-600 mb-2 border-b pb-2">📱 Conteúdo dos Stories</h4>
                     <div class="space-y-4 pt-2">
-                        <div>
-                            <label for="stories-theme" class="form-label">Tema do Dia</label>
-                            <input type="text" id="stories-theme" class="form-input" placeholder="Ex: Segunda da Técnica" value="${content.stories.theme || ''}">
-                        </div>
-                        <div>
-                            <label for="stories-description" class="form-label">Descrição dos Stories</label>
-                            <textarea id="stories-description" rows="2" class="form-input" placeholder="Ex: Dica rápida em vídeo, enquete...">${content.stories.description || ''}</textarea>
-                        </div>
+                        <div><label for="stories-theme" class="form-label">Tema do Dia</label><input type="text" id="stories-theme" class="form-input" placeholder="Ex: Segunda da Técnica" value="${content.stories?.theme || ''}"></div>
+                        <div><label for="stories-description" class="form-label">Descrição dos Stories</label><textarea id="stories-description" rows="2" class="form-input" placeholder="Ex: Dica rápida em vídeo, enquete...">${content.stories?.description || ''}</textarea></div>
                     </div>
                 </div>
                 <div>
                     <h4 class="text-lg font-bold text-purple-600 mb-2 border-b pb-2">🎬 Conteúdo do Feed</h4>
                     <div class="space-y-4 pt-2">
-                         <div>
-                            <label for="feed-title" class="form-label">Título do Post</label>
-                            <input type="text" id="feed-title" class="form-input" placeholder="Ex: O Segredo do Brilho Espelhado" value="${content.feed.title || ''}">
-                        </div>
-                        <div>
-                            <label for="feed-type" class="form-label">Formato</label>
-                            <select id="feed-type" class="form-input">
-                                <option value="Estático" ${content.feed.type === 'Estático' ? 'selected' : ''}>Estático (Imagem Única)</option>
-                                <option value="Carrossel" ${content.feed.type === 'Carrossel' ? 'selected' : ''}>Carrossel</option>
-                                <option value="Reel" ${content.feed.type === 'Reel' ? 'selected' : ''}>Reel</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="feed-brand" class="form-label">Marca em Destaque</label>
-                            <input type="text" id="feed-brand" class="form-input" placeholder="Ex: Norton" value="${content.feed.brand || ''}">
-                        </div>
-                        <div>
-                            <label for="feed-description" class="form-label">Descrição do Post</label>
-                            <textarea id="feed-description" rows="3" class="form-input" placeholder="Detalhes do que será mostrado no post...">${content.feed.description || ''}</textarea>
-                        </div>
-                        <div>
-                            <label for="feed-cta" class="form-label">Chamada para Ação (CTA)</label>
-                            <input type="text" id="feed-cta" class="form-input" placeholder="Ex: Visite nossa loja!" value="${content.feed.cta || ''}">
-                        </div>
+                         <div><label for="feed-title" class="form-label">Título do Post</label><input type="text" id="feed-title" class="form-input" placeholder="Ex: O Segredo do Brilho Espelhado" value="${content.feed?.title || ''}"></div>
+                         <div><label for="feed-type" class="form-label">Formato</label><select id="feed-type" class="form-input"><option value="Estático" ${content.feed?.type === 'Estático' ? 'selected' : ''}>Estático</option><option value="Carrossel" ${content.feed?.type === 'Carrossel' ? 'selected' : ''}>Carrossel</option><option value="Reel" ${content.feed?.type === 'Reel' ? 'selected' : ''}>Reel</option></select></div>
+                         <div><label for="feed-brand" class="form-label">Marca em Destaque</label><input type="text" id="feed-brand" class="form-input" placeholder="Ex: Norton" value="${content.feed?.brand || ''}"></div>
+                         <div><label for="feed-description" class="form-label">Descrição do Post</label><textarea id="feed-description" rows="3" class="form-input" placeholder="Detalhes do que será mostrado no post...">${content.feed?.description || ''}</textarea></div>
+                         <div><label for="feed-cta" class="form-label">Chamada para Ação (CTA)</label><input type="text" id="feed-cta" class="form-input" placeholder="Ex: Visite nossa loja!" value="${content.feed?.cta || ''}"></div>
                     </div>
                 </div>
             `;
             
-            modalFooter.innerHTML = `
-                <button id="delete-btn" class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">Excluir</button>
-                <button id="save-btn" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Salvar Alterações</button>
-            `;
-            
+            modalFooter.innerHTML = `<button id="delete-btn" class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none">Excluir</button><button id="save-btn" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none">Salvar</button>`;
             document.getElementById('save-btn').addEventListener('click', saveContent);
             document.getElementById('delete-btn').addEventListener('click', deleteContent);
 
@@ -222,7 +318,7 @@
             setTimeout(() => modal.classList.add('hidden'), 200);
         }
 
-        function saveContent() {
+        async function saveContent() {
             const newContent = {
                 stories: {
                     theme: document.getElementById('stories-theme').value.trim(),
@@ -237,29 +333,39 @@
                 }
             };
             
-            // Clean up empty objects
-            if (!newContent.stories.theme && !newContent.stories.description) {
-                delete newContent.stories;
-            }
-             if (!newContent.feed.title && !newContent.feed.description) {
-                delete newContent.feed;
-            }
+            if (!newContent.stories.theme && !newContent.stories.description) delete newContent.stories;
+            if (!newContent.feed.title && !newContent.feed.description) delete newContent.feed;
 
-            if (newContent.stories || newContent.feed) {
-                contentData[selectedDay] = newContent;
+            const docRef = doc(db, "calendars", "silva-tintas-content");
+            const updatedData = { ...contentData };
+
+            if (Object.keys(newContent).length > 0) {
+                updatedData[selectedDayKey] = newContent;
             } else {
-                delete contentData[selectedDay]; // Delete if all fields are empty
+                delete updatedData[selectedDayKey];
             }
             
-            hideModal();
-            renderCalendar();
+            try {
+                await setDoc(docRef, updatedData);
+                hideModal();
+            } catch (error) {
+                console.error("Error saving content: ", error);
+                alert("Não foi possível salvar as alterações. Verifique sua conexão.");
+            }
         }
 
-        function deleteContent() {
+        async function deleteContent() {
             if (confirm('Tem certeza que deseja excluir todo o conteúdo deste dia?')) {
-                delete contentData[selectedDay];
-                hideModal();
-                renderCalendar();
+                const docRef = doc(db, "calendars", "silva-tintas-content");
+                const updatedData = { ...contentData };
+                delete updatedData[selectedDayKey];
+                try {
+                    await setDoc(docRef, updatedData);
+                    hideModal();
+                } catch (error) {
+                    console.error("Error deleting content: ", error);
+                    alert("Não foi possível excluir o conteúdo. Verifique sua conexão.");
+                }
             }
         }
 
@@ -267,15 +373,15 @@
         prevMonthBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); });
         nextMonthBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); });
         calendarGrid.addEventListener('click', (e) => {
-            const dayCell = e.target.closest('[data-day]');
-            if (dayCell) showModal(dayCell.dataset.day);
+            const dayCell = e.target.closest('[data-day-key]');
+            if (dayCell) showModal(dayCell.dataset.day, dayCell.dataset.dayKey);
         });
         closeModalBtn.addEventListener('click', hideModal);
         modal.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) hideModal(); });
 
-        // Initial Render
-        renderCalendar();
+        // --- INITIALIZATION ---
+        initializeAppLogic();
     </script>
 </body>
 </html>
